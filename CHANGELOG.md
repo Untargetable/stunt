@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2026-09-06
+
+### Fixed
+
+- `stunt` failed to start when installed with `pipx` or `uv tool install`, exiting
+  with `'mitmdump' not found on PATH`. Those installers put dependencies in an
+  isolated environment and expose only stunt's own entry point, so the bundled
+  mitmproxy binaries were present but unreachable. The runner is now resolved next
+  to the running interpreter before falling back to `PATH`.
+
 ## [1.0.1] - 2026-09-06
 
 ### Fixed
@@ -48,5 +58,6 @@ Initial release.
 - JSON Schema at `docs/stunt_schema.json`, wired up via a `yaml-language-server`
   modeline for editor validation.
 
+[1.0.2]: https://github.com/Untargetable/stunt/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/Untargetable/stunt/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/Untargetable/stunt/releases/tag/v1.0.0

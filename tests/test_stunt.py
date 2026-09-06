@@ -1165,7 +1165,7 @@ def test_cli_exit_code(monkeypatch):
         cli.main()
 
     assert exc.value.code == 7
-    assert captured["cmd"][0] == "mitmweb"
+    assert Path(captured["cmd"][0]).name.startswith("mitmweb")
 
 
 # ========================================================
@@ -2034,7 +2034,7 @@ def test_cli_runner_flag_selects_binary(monkeypatch):
     with pytest.raises(SystemExit):
         cli.main()
 
-    assert captured["cmd"][0] == "mitmdump"
+    assert Path(captured["cmd"][0]).name.startswith("mitmdump")
 
 
 def test_cli_mode_deprecated_alias_still_selects_runner(monkeypatch, capsys):
@@ -2053,7 +2053,7 @@ def test_cli_mode_deprecated_alias_still_selects_runner(monkeypatch, capsys):
     with pytest.raises(SystemExit):
         cli.main()
 
-    assert captured["cmd"][0] == "mitmdump"
+    assert Path(captured["cmd"][0]).name.startswith("mitmdump")
     assert "deprecated" in capsys.readouterr().err.lower()
 
 
@@ -2079,7 +2079,7 @@ def test_cli_mode_mitmproxy_style_value_forwarded(monkeypatch, capsys):
         cli.main()
 
     cmd = captured["cmd"]
-    assert cmd[0] == "mitmweb"  # runner still defaults to web
+    assert Path(cmd[0]).name.startswith("mitmweb")  # runner still defaults to web
     assert "--mode" in cmd
     assert cmd[cmd.index("--mode") + 1] == "reverse:https://api.example.com"
     assert "deprecated" not in capsys.readouterr().err.lower()
@@ -2105,7 +2105,7 @@ def test_cli_runner_and_mitmproxy_mode_combine(monkeypatch):
         cli.main()
 
     cmd = captured["cmd"]
-    assert cmd[0] == "mitmdump"
+    assert Path(cmd[0]).name.startswith("mitmdump")
     assert "--mode" in cmd
     assert cmd[cmd.index("--mode") + 1] == "socks5"
 
@@ -3193,7 +3193,7 @@ def test_cli_missing_runner_binary_is_actionable(monkeypatch, capsys):
         cli_main()
     assert e.value.code == 127
     err = capsys.readouterr().err
-    assert "not found on PATH" in err and "pip install -e ." in err
+    assert "could not be found" in err and "mitmproxy" in err
 
 
 # --------------------------------------------------------------------------- #
@@ -3440,3 +3440,37 @@ def test_generated_schema_url_is_the_same_in_both_emitters():
     from stunt import cli as cli_mod
 
     assert cli_mod.SCHEMA_URL == addon_mod.SCHEMA_URL
+
+
+# ========================================================
+# Runner resolution under pipx / uv isolation
+# ========================================================
+
+
+def test_runner_is_resolved_next_to_the_interpreter_not_via_path(tmp_path, monkeypatch):
+    """pipx and `uv tool install` expose only stunt's own entry point, leaving
+    mitmdump installed in the venv but absent from PATH."""
+    from stunt import cli
+
+    bindir = tmp_path / "venv" / "bin"
+    bindir.mkdir(parents=True)
+    fake = bindir / "mitmdump"
+    fake.write_text("#!/bin/sh\n")
+    fake.chmod(0o755)
+
+    monkeypatch.setattr(cli.sys, "executable", str(bindir / "python"))
+    monkeypatch.setenv("PATH", str(tmp_path / "empty"))  # nothing resolvable here
+
+    captured = {}
+
+    def fake_run(cmd, **kw):
+        captured["cmd"] = cmd
+        return Mock(returncode=0)
+
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+    monkeypatch.setattr(cli.sys, "argv", ["stunt", "--runner", "dump"])
+
+    with pytest.raises(SystemExit):
+        cli.main()
+
+    assert captured["cmd"][0] == str(fake)

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "stunt"
-version = "1.0.1"
+version = "1.0.2"
 description = "An understudy for your backend: mock, modify, delay and throttle HTTP from a hot-reloading rules.yaml."
 authors = [{name = "Untargetable", email = "vkmishima@gmail.com"}]
 license = {text = "MIT"}

@@ -1,5 +1,6 @@
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -182,7 +183,14 @@ def main():
         "dump": "mitmdump",
     }[runner_choice]
 
-    cmd = [runner, "-s", str(addon_path)]
+    # Resolve the runner next to the interpreter running us BEFORE falling back to
+    # PATH. pipx/uv put the app's dependencies in an isolated venv and expose only
+    # stunt's own entry point, so mitmdump is installed but not on PATH.
+    # shutil.which handles the .exe suffix on Windows.
+    bindir = str(Path(sys.executable).parent)
+    runner_exe = shutil.which(runner, path=bindir) or shutil.which(runner) or runner
+
+    cmd = [runner_exe, "-s", str(addon_path)]
     if args.rules:
         cmd += ["--set", f"stunt_rules={Path(args.rules).expanduser().resolve()}"]
     if args.mocks:
@@ -208,10 +216,10 @@ def main():
     except FileNotFoundError:
         # Almost always a venv that isn't on PATH; a traceback would not say so.
         print(
-            f"stunt: '{runner}' not found on PATH.\n"
-            f"  It ships with mitmproxy, which is a dependency of stunt.\n"
-            f"  Activate the virtualenv you installed into, or reinstall with:\n"
-            f"      pip install -e .",
+            f"stunt: '{runner}' could not be found.\n"
+            f"  It ships with mitmproxy, which is a dependency of stunt, and is\n"
+            f"  normally found next to the running interpreter.\n"
+            f"  Reinstall stunt, or activate the virtualenv you installed it into.",
             file=sys.stderr,
         )
         sys.exit(127)
