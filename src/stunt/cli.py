@@ -4,9 +4,12 @@ import subprocess
 import sys
 from pathlib import Path
 
-# Template written by `stunt init`.
-_STARTER_RULES_YAML = """\
-# yaml-language-server: $schema=./docs/stunt_schema.json
+# Schema URL, not a relative path: scaffolded and recorded files land in the user's
+# own directory, which has no docs/ tree. Keep in sync with addon.SCHEMA_URL.
+SCHEMA_URL = "https://raw.githubusercontent.com/Untargetable/stunt/main/docs/stunt_schema.json"
+
+# Template written by `stunt init`. Not an f-string: the body is full of YAML braces.
+_STARTER_RULES_YAML = f"# yaml-language-server: $schema={SCHEMA_URL}\n" + """\
 # Scaffolded by `stunt init`. Edit freely — rules.yaml hot-reloads on save.
 
 mock:

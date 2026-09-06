@@ -3396,3 +3396,47 @@ async def test_scrubbing_does_not_move_a_small_body_out_to_a_file(addon, tmp_pat
     assert "<redacted>" in text
     assert "file:" not in text
     assert not list(addon.mocks_dir.glob("rec_*"))
+
+
+# ========================================================
+# Schema modeline in generated files
+# ========================================================
+
+
+def _schema_ref(text: str) -> str:
+    line = text.splitlines()[0]
+    assert line.startswith("# yaml-language-server: $schema="), line
+    return line.split("$schema=", 1)[1].strip()
+
+
+def test_init_schema_modeline_resolves_outside_a_checkout(tmp_path, monkeypatch):
+    """`stunt init` writes into a directory with no docs/ tree, so a relative
+    ./docs/ reference would dangle for everyone who installed from PyPI."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("stunt.cli.sys.argv", ["stunt", "init"])
+
+    with pytest.raises(SystemExit) as exc:
+        cli_main()
+
+    assert exc.value.code == 0
+    ref = _schema_ref((tmp_path / "rules.yaml").read_text())
+    assert ref.startswith("https://"), ref
+    assert not (tmp_path / "docs").exists()
+
+
+async def test_recorded_schema_modeline_resolves_outside_a_checkout(addon):
+    """Same for `--record`: the file lands wherever the user pointed it."""
+    out = addon.rules_file.parent / "recorded.yaml"
+    await _record(addon, [_recorded_flow()], out=out)
+
+    ref = _schema_ref(out.read_text())
+    assert ref.startswith("https://"), ref
+    assert not (out.parent / "docs").exists()
+
+
+def test_generated_schema_url_is_the_same_in_both_emitters():
+    """cli.py and addon.py each carry the constant; they must not drift apart."""
+    from stunt import addon as addon_mod
+    from stunt import cli as cli_mod
+
+    assert cli_mod.SCHEMA_URL == addon_mod.SCHEMA_URL

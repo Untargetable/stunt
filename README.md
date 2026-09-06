@@ -454,18 +454,25 @@ The repo includes a full reference `rules.yaml` with a disabled kitchen-sink rul
 
 #### Editor autocomplete and typo checking
 
-The shipped `rules.yaml` starts with a modeline that points editors at the schema:
+Files written by `stunt init` and `stunt --record` start with a modeline pointing
+editors at the schema:
 
 ```yaml
-# yaml-language-server: $schema=./docs/stunt_schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Untargetable/stunt/main/docs/stunt_schema.json
 ```
 
 With the [YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml) in
 VS Code, or the built-in JSON Schema support in JetBrains IDEs, this gives you
 autocomplete for every rule key and flags anything the schema doesn't recognise —
 including a typo like `path_regexp` or `respond:` — directly in the editor, before
-you ever start the proxy. The path is relative to `rules.yaml` itself, so it works
-right after a fresh clone with no extra setup.
+you ever start the proxy.
+
+Working inside a clone of this repo, you can point at the local copy instead, which
+is what this repo's own `rules.yaml` does:
+
+```yaml
+# yaml-language-server: $schema=./docs/stunt_schema.json
+```
 
 #### Locating `rules.yaml` and `mocks/`
 

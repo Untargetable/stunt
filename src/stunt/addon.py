@@ -1680,6 +1680,10 @@ def lint_rules(rules_path: Path, mocks_dir: Path) -> List[str]:
 #
 # Bodies at or under this size are inlined into rules.yaml when they parse as JSON;
 # anything larger, or not JSON, goes to mocks/ and is referenced with `file:`.
+# Schema URL, not a relative path: a recorded rules file lands in the user's own
+# directory, which has no docs/ tree. Keep in sync with cli.SCHEMA_URL.
+SCHEMA_URL = "https://raw.githubusercontent.com/Untargetable/stunt/main/docs/stunt_schema.json"
+
 RECORD_INLINE_MAX = 2048
 # Bodies up to this size are parsed as JSON so they can be scrubbed key-by-key,
 # inlined or not. Past it, only the regex fallback applies.
@@ -1910,7 +1914,7 @@ class Recorder:
                 f'"{REDACTED}". Scrubbing is best-effort.\n'
             )
         header = (
-            "# yaml-language-server: $schema=./docs/stunt_schema.json\n"
+            f"# yaml-language-server: $schema={SCHEMA_URL}\n"
             "# Recorded by `stunt --record`. Review before committing: a recording\n"
             "# can still contain personal data, tokens or IDs inside response bodies.\n" + header_note
         )
