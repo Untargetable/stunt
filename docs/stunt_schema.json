@@ -1,0 +1,525 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "quiet": {
+      "type": "boolean",
+      "description": "Suppress non-error logs globally.",
+      "default": false
+    },
+    "trace": {
+      "type": "boolean",
+      "description": "opt-in match-trace log \u2014 per request, log every rule considered and why each one didn't match. Same effect as --trace-matches.",
+      "default": false
+    },
+    "global_delay": {
+      "oneOf": [
+        {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10
+        },
+        {
+          "type": "object",
+          "properties": {
+            "fixed": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "random": {
+              "oneOf": [
+                {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 10
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10
+                  },
+                  "minItems": 2,
+                  "maxItems": 2
+                }
+              ]
+            }
+          },
+          "minProperties": 1,
+          "additionalProperties": false
+        }
+      ],
+      "description": "Global delay in seconds: a number, {fixed: N}, or {random: N|[min,max]}. If both fixed and random are given, fixed wins."
+    },
+    "throttle": {
+      "$ref": "#/definitions/throttle"
+    },
+    "state": {
+      "type": "object",
+      "description": "Initial state values for stateful rules.",
+      "additionalProperties": true
+    },
+    "defaults": {
+      "$ref": "#/definitions/rule",
+      "description": "Rule keys shallow-merged into every rule (including mock: rules). A rule's own key always wins."
+    },
+    "mock": {
+      "type": "object",
+      "description": "Shorthand mocks. Key is '[METHOD ]path' (exact path, query string ignored); value is a bare JSON body or a respond_with object. Lower priority than rules:.",
+      "propertyNames": {
+        "pattern": "^(?:(?:GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS|TRACE|CONNECT) )?/"
+      },
+      "additionalProperties": true
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/rule"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "rule": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Rule identifier."
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "probability": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 1
+        },
+        "priority": {
+          "type": "integer",
+          "default": 0
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Maximum number of times this rule can be applied."
+        },
+        "once": {
+          "type": "boolean",
+          "default": false,
+          "description": "Apply this rule only once (equivalent to count: 1)."
+        },
+        "quiet": {
+          "type": "boolean",
+          "description": "Override global quiet setting for this rule."
+        },
+        "delay": {
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            },
+            {
+              "type": "object",
+              "properties": {
+                "fixed": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 10
+                },
+                "random": {
+                  "oneOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 10
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 10
+                      },
+                      "minItems": 2,
+                      "maxItems": 2
+                    }
+                  ]
+                }
+              },
+              "minProperties": 1,
+              "additionalProperties": false
+            }
+          ],
+          "description": "Delay in seconds: a number, {fixed: N}, or {random: N|[min,max]}. If both fixed and random are given, fixed wins."
+        },
+        "throttle": {
+          "$ref": "#/definitions/throttle"
+        },
+        "method": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "host": {
+          "type": "string",
+          "description": "Host regex"
+        },
+        "passthrough": {
+          "type": "boolean",
+          "description": "Serve respond_with/cycle/random in the response phase, after fetching the real response"
+        },
+        "url_contains": {
+          "type": "string"
+        },
+        "url_regex": {
+          "type": "string"
+        },
+        "path_contains": {
+          "type": "string"
+        },
+        "path_regex": {
+          "type": "string"
+        },
+        "status_code": {
+          "oneOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          ]
+        },
+        "state": {
+          "type": "object",
+          "properties": {
+            "require": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "set": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "delete": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": true,
+          "description": "State requirements and mutations."
+        },
+        "cycle": {
+          "type": "array",
+          "description": "Cycle through multiple respond_with variants on each match.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "integer",
+                "default": 200
+              },
+              "body": true,
+              "headers": {
+                "type": "object"
+              },
+              "file": {
+                "type": "string"
+              },
+              "json": {
+                "type": "boolean",
+                "default": true
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "random": {
+          "type": "array",
+          "description": "Choose a respond_with variant at random on each match.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "integer",
+                "default": 200
+              },
+              "body": true,
+              "headers": {
+                "type": "object"
+              },
+              "file": {
+                "type": "string"
+              },
+              "json": {
+                "type": "boolean",
+                "default": true
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "header_contains": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "query_contains": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "json_body": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "JSONPath matchers for request body"
+        },
+        "json_contains": {
+          "description": "match when the request body contains this shape (recursive subset). Objects match if every key/value is present; arrays if every element is contained somewhere. A leaf of {\"$regex\": \"...\"} matches by regex instead of equality.",
+          "type": [
+            "object",
+            "array"
+          ]
+        },
+        "response_json": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "JSONPath matchers for response body"
+        },
+        "response_json_contains": {
+          "description": "match when the response body contains this shape (recursive subset). Objects match if every key/value is present; arrays if every element is contained somewhere. A leaf of {\"$regex\": \"...\"} matches by regex instead of equality.",
+          "type": [
+            "object",
+            "array"
+          ]
+        },
+        "modify_request_headers": {
+          "type": "object",
+          "properties": {
+            "set": {
+              "type": "object"
+            },
+            "remove": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "modify_request_query": {
+          "type": "object",
+          "properties": {
+            "set": {
+              "type": "object"
+            },
+            "remove": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "modify_request_json": {
+          "type": "object",
+          "properties": {
+            "set": {
+              "type": "object"
+            },
+            "append": {
+              "type": "object"
+            },
+            "delete": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "JSONPath expressions to delete (keys or filtered array items)"
+            },
+            "merge": {
+              "type": "object",
+              "description": "deep merge. Keys are JSONPath expressions. A value that is a plain object is deep-merged into every match. A value with $where selects array elements by containment and applies $merge or $replace to each.",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "$where": {
+                    "description": "Containment pattern selecting array elements to act on."
+                  },
+                  "$merge": {
+                    "type": "object",
+                    "description": "Deep-merged into every selected element."
+                  },
+                  "$replace": {
+                    "description": "Replaces every selected element outright."
+                  }
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "modify_response_headers": {
+          "type": "object",
+          "properties": {
+            "set": {
+              "type": "object"
+            },
+            "remove": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "modify_response_json": {
+          "type": "object",
+          "properties": {
+            "set": {
+              "type": "object"
+            },
+            "append": {
+              "type": "object"
+            },
+            "delete": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "JSONPath expressions to delete (keys or filtered array items)"
+            },
+            "merge": {
+              "type": "object",
+              "description": "deep merge. Keys are JSONPath expressions. A value that is a plain object is deep-merged into every match. A value with $where selects array elements by containment and applies $merge or $replace to each.",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "$where": {
+                    "description": "Containment pattern selecting array elements to act on."
+                  },
+                  "$merge": {
+                    "type": "object",
+                    "description": "Deep-merged into every selected element."
+                  },
+                  "$replace": {
+                    "description": "Replaces every selected element outright."
+                  }
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "error": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "integer",
+              "default": 500
+            },
+            "body": true,
+            "headers": {
+              "type": "object"
+            },
+            "file": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "respond_with": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "integer",
+              "default": 200
+            },
+            "body": true,
+            "headers": {
+              "type": "object"
+            },
+            "file": {
+              "type": "string"
+            },
+            "json": {
+              "type": "boolean",
+              "default": true
+            }
+          },
+          "additionalProperties": false
+        },
+        "max_body_size": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 4194304
+        },
+        "kill": {
+          "type": "boolean",
+          "default": false,
+          "description": "drop the connection instead of answering. Fires in the request phase, before the upstream is contacted. Combine with delay: to simulate a timeout (hang, then drop)."
+        }
+      },
+      "additionalProperties": false
+    },
+    "throttle": {
+      "description": "bandwidth throttling. Transfer time is approximated as body_size / rate with a single sleep (not packet-level pacing), capped at 30s. Presets are download rates in kbit/s: gprs 50, 2g 240, slow-3g 400, 3g 1600, dsl 2000, 4g 4000, wifi 30000.",
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "gprs",
+            "2g",
+            "slow-3g",
+            "3g",
+            "dsl",
+            "4g",
+            "wifi"
+          ]
+        },
+        {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Rate in kbit/s."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kbps": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          },
+          "required": [
+            "kbps"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

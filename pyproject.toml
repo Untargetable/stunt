@@ -1,0 +1,72 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stunt"
+version = "1.0.0"
+description = "An understudy for your backend: mock, modify, delay and throttle HTTP from a hot-reloading rules.yaml."
+authors = [{name = "Untargetable", email = "vkmishima@gmail.com"}]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.12"
+keywords = ["mitmproxy", "mock", "proxy", "http", "testing", "yaml"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Internet :: Proxy Servers",
+]
+dependencies = [
+    "mitmproxy>=12.0,<13.0",
+    "pyyaml>=6.0",
+    "jsonpath-ng>=1.6",
+    "watchfiles>=0.21",
+]
+
+[project.urls]
+Homepage = "https://github.com/Untargetable/stunt"
+Repository = "https://github.com/Untargetable/stunt"
+Issues = "https://github.com/Untargetable/stunt/issues"
+Changelog = "https://github.com/Untargetable/stunt/blob/main/CHANGELOG.md"
+
+[project.scripts]
+stunt = "stunt.cli:main"
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "jsonschema>=4.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = false
+
+[tool.pytest.ini_options]
+addopts = "-v --asyncio-mode=auto"
+testpaths = ["tests"]
+asyncio_mode = "auto"
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+pythonpath = "src"
+markers = [
+    "e2e: end-to-end tests that spawn a real mitmdump subprocess (deselect with -m 'not e2e').",
+]
+
+[tool.black]
+line-length = 120
+target-version = ["py312"]
+
+[tool.isort]
+profile = "black"
+line_length = 120

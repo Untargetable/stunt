@@ -1,0 +1,156 @@
+# yaml-language-server: $schema=./docs/stunt_schema.json
+# Stunt sample rules
+# Use this file as a reference. The "kitchen sink" rule below carries most of the
+# per-rule options in one place (it is disabled by default). The complete field
+# list lives in README.md and docs/stunt_schema.json.
+
+quiet: false
+# global_delay: 0.3
+# global_delay:
+#   random: [0.1, 0.6]
+
+# Bandwidth throttling for every flow. Preset name or {kbps: N}.
+# Presets (kbit/s): gprs 50, 2g 240, slow-3g 400, 3g 1600, dsl 2000, 4g 4000, wifi 30000.
+# throttle: 3g
+# throttle: { kbps: 256 }
+
+rules:
+  # Kitchen-sink reference rule (disabled). Copy and trim for your use case.
+  - name: "kitchen-sink"
+    enabled: false
+    probability: 1.0
+    priority: 100
+    count: 10
+    once: false
+    quiet: false
+    state:
+      require:
+        stage: "start"
+      set:
+        stage: "done"
+      delete: ["temp"]
+    delay:
+      fixed: 0.2
+      # random: [0.2, 0.8]
+    throttle: "slow-3g"   # or { kbps: 256 }
+    # kill: true          # drop the connection instead of answering (request phase)
+
+    # Matchers
+    method: ["GET", "POST"]
+    host: "^api\\.example\\.com$"
+    url_contains: "/api/v1"
+    url_regex: "/v1/(users|orders)/\\d+"
+    path_contains: "/orders"
+    path_regex: "/orders/\\d+"
+    status_code: [200, 201]
+    header_contains:
+      user-agent: "Mozilla"
+      x-feature: "beta"
+    query_contains:
+      locale: "en"
+    json_body:
+      $.user.id: 123
+      $.flags.beta: { "$exists": true }
+    json_contains:                        # match by example, no JSONPath
+      user: { role: "admin" }
+      items:
+        - { sku: "B" }
+      email: { "$regex": "@example\\.com$" }
+    response_json:
+      $.data.items[0].id: { "$exists": true }
+    response_json_contains:
+      data: { flags: { beta: true } }
+
+    # Request modifications
+    modify_request_headers:
+      set:
+        X-Debug: "1"
+      remove: ["X-Remove-Me"]
+    modify_request_query:
+      set:
+        test_mode: "1"
+      remove: ["utm_source"]
+    modify_request_json:
+      set:
+        $.user.role: "admin"
+      append:
+        $.items:
+          id: "NEW"
+          qty: 1
+      delete:
+        - $.items[?(@.id=="REMOVE-ME")]
+
+    # Response modifications
+    modify_response_headers:
+      set:
+        X-Stunt: "active"
+      remove: ["X-Powered-By"]
+    modify_response_json:
+      set:
+        $.data.flags.new_ui: true
+      append:
+        $.data.items:
+          id: "EXTRA"
+          qty: 1
+      merge:                              # deep merge, optionally by predicate
+        $.data.user:
+          role: "admin"
+          prefs: { theme: "dark" }
+        $.data.items:
+          $where: { sku: "ABC123" }
+          $merge: { price: 0 }
+      delete:
+        - $.data.items[?(@.id=="DELETE-ME")]
+
+    # Respond or error (if set, takes precedence when matched)
+    # error:
+    #   status: 429
+    #   body: { "message": "Rate limited" }
+    #   headers: { "Content-Type": "application/json" }
+    # respond_with:
+    #   status: 200
+    #   json: true
+    #   body: { "ok": true }
+    #   # or load from file in mocks/
+    #   # file: "sample_response.json"
+    #   headers: { "Content-Type": "application/json" }
+    # cycle:
+    #   - status: 200
+    #     body: { "step": 1 }
+    #   - status: 200
+    #     body: { "step": 2 }
+    # random:
+    #   - status: 200
+    #     body: { "ok": true }
+    #   - status: 500
+    #     body: { "ok": false }
+
+  # Practical examples
+  - name: "mock profile"
+    enabled: false
+    url_contains: "/api/profile"
+    respond_with:
+      status: 200
+      file: "sample_response.json"
+      headers:
+        Content-Type: "application/json"
+
+  - name: "cart price override"
+    enabled: false
+    url_contains: "/api/cart"
+    modify_response_json:
+      set:
+        $.items[?(@.sku=="ABC123")].price: 99.99
+
+  - name: "drop a sold-out offer"
+    enabled: false
+    url_contains: "/api/offers"
+    modify_response_json:
+      delete:
+        - $.offers[?(@.in_stock==false)]
+
+  - name: "slow checkout"
+    enabled: false
+    url_contains: "/api/checkout"
+    delay:
+      fixed: 5

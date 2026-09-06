@@ -1,0 +1,41 @@
+# Changelog
+
+All notable changes to this project are documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [1.0.0] - 2026-09-06
+
+Initial release.
+
+### Added
+
+- Rule-driven HTTP mocking from a `rules.yaml` that hot-reloads on save.
+- Matchers: `host`, `url_contains`, `path`, `path_regex`, `method`, `status_code`,
+  `header`, `query`, `json_contains`, `response_json_contains`.
+- Actions: `respond_with`, `cycle`, `random`, `error`, `kill`, `delay`, `throttle`,
+  `modify_request_headers` / `_query` / `_json`, `modify_response_headers` / `_json`.
+- Mocks are served in the **request** phase, so they work with no backend at all.
+  `passthrough: true` opts into fetch-then-modify behaviour.
+- JSON edit verbs `set`, `append`, `delete` and `merge`, addressed by JSONPath.
+  `merge` supports `$where` predicate targeting and `$replace`.
+- Stateful flows: top-level `state:` seeds values, rule-level `state:` gates and
+  mutates them, with `once` / `count` budgets.
+- `mock:` shorthand for one-line path-keyed mocks, and a `defaults:` block for
+  settings shared across rules.
+- `throttle:` bandwidth simulation with presets (`gprs`, `2g`, `slow-3g`, `3g`,
+  `dsl`, `4g`, `wifi`) or an explicit `{kbps: N}`.
+- `stunt init` scaffolds a working `rules.yaml` and `mocks/`; `stunt lint` validates
+  a rules file without starting a proxy.
+- `--trace-matches` logs why each rule did or did not match.
+- `--record PATH` records real traffic into a replayable rules file plus mock bodies,
+  scoped by `--record-host` / `--record-path`. Recorded bodies are scrubbed by
+  default (sensitive JSON keys, JWTs, high-entropy strings); `--record-raw` opts out.
+- mitmproxy commands `stunt.rules.list` / `.toggle`, `stunt.state.get` / `.set`,
+  `stunt.record.start` / `.stop` and `stunt.reload`, usable from the mitmweb command
+  palette and the mitmproxy console.
+- JSON Schema at `docs/stunt_schema.json`, wired up via a `yaml-language-server`
+  modeline for editor validation.
+
+[1.0.0]: https://github.com/Untargetable/stunt/releases/tag/v1.0.0
